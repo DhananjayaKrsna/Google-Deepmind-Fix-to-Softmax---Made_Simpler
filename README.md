@@ -121,7 +121,7 @@ A few reference values you will meet later:
 
 **Softmax** converts logits into a **probability distribution** (all entries positive, summing to 1):
 
-$$q_k = \operatorname{softmax}(\mathbf{z})_k = \frac{e^{z_k}}{\sum_{j=1}^{K} e^{z_j}}$$
+$$q_k = \mathrm{softmax}(\mathbf{z})_k = \frac{e^{z_k}}{\sum_{j=1}^{K} e^{z_j}}$$
 
 For $\mathbf{z}=[2,1,0]$: the exponentials are $[7.389,\ 2.718,\ 1.000]$, their sum is $11.107$, so $\mathbf{q} \approx [0.665,\ 0.245,\ 0.090]$.
 
@@ -131,13 +131,13 @@ A **probability distribution over $K$ classes** is a vector with non-negative en
 
 ### 3.4 log-sum-exp (LSE) and log-softmax
 
-$$\operatorname{LSE}(\mathbf{z}) = \log \sum_{j} e^{z_j}$$
+$$\mathrm{LSE}(\mathbf{z}) = \log \sum_{j} e^{z_j}$$
 
 Taking the log of the softmax formula gives **log-softmax**:
 
-$$\log q_k = z_k - \operatorname{LSE}(\mathbf{z})$$
+$$\log q_k = z_k - \mathrm{LSE}(\mathbf{z})$$
 
-The paper writes this as $\operatorname{logsoftmax}(\mathbf{z})_k$. Log-softmax is preferred in practice because probabilities can be astronomically small, and logs of them stay in a comfortable range (for example $-18$ instead of $1.5\times10^{-8}$).
+The paper writes this as $\mathrm{logsoftmax}(\mathbf{z})_k$. Log-softmax is preferred in practice because probabilities can be astronomically small, and logs of them stay in a comfortable range (for example $-18$ instead of $1.5\times10^{-8}$).
 
 ### 3.5 Cross-entropy, hard targets and soft targets
 
@@ -148,11 +148,11 @@ A **target distribution** $\mathbf{p}$ says what the right answer is.
 
 **Cross-entropy** between target $\mathbf{p}$ and logits $\mathbf{z}$:
 
-$$\mathcal{L}(\mathbf{z},\mathbf{p}) = -\sum_{k} p_k \,\operatorname{logsoftmax}(\mathbf{z})_k$$
+$$\mathcal{L}(\mathbf{z},\mathbf{p}) = -\sum_{k} p_k \,\mathrm{logsoftmax}(\mathbf{z})_k$$
 
 For a hard target this collapses to a single term:
 
-$$\mathcal{L}(\mathbf{z},t) = -\log q_t = -z_t + \operatorname{LSE}(\mathbf{z})$$
+$$\mathcal{L}(\mathbf{z},t) = -\log q_t = -z_t + \mathrm{LSE}(\mathbf{z})$$
 
 Intuition: the loss is the "surprise" of the model at seeing the correct class. If $q_t = 1$, surprise is $0$. If $q_t$ is small, the loss is large.
 
@@ -164,9 +164,9 @@ The **chain rule** says that if $y=f(g(x))$ then $dy/dx = f'(g(x))\,g'(x)$. Fram
 
 Derivation of the paper's $\mathbf{g}=\mathbf{q}-\mathbf{p}$ (assuming $\sum_k p_k = 1$):
 
-1. $\mathcal{L} = -\sum_k p_k\,(z_k - \operatorname{LSE}(\mathbf{z}))= -\sum_k p_k z_k + \operatorname{LSE}(\mathbf{z})\sum_k p_k = -\sum_k p_k z_k + \operatorname{LSE}(\mathbf{z})$.
+1. $\mathcal{L} = -\sum_k p_k\,(z_k - \mathrm{LSE}(\mathbf{z}))= -\sum_k p_k z_k + \mathrm{LSE}(\mathbf{z})\sum_k p_k = -\sum_k p_k z_k + \mathrm{LSE}(\mathbf{z})$.
 2. $\partial(-\sum_k p_k z_k)/\partial z_j = -p_j$.
-3. $\partial \operatorname{LSE}/\partial z_j = e^{z_j}/\sum_i e^{z_i} = q_j$.
+3. $\partial \mathrm{LSE}/\partial z_j = e^{z_j}/\sum_i e^{z_i} = q_j$.
 4. Therefore $\partial\mathcal{L}/\partial z_j = q_j - p_j$.
 
 So the gradient is "predicted probability minus target probability". Two consequences that matter for the paper:
@@ -180,9 +180,9 @@ Three small functions that the fix is built from:
 
 | Function | Definition | Why it exists |
 |---|---|---|
-| $\operatorname{softplus}(x)$ | $\log(1+e^{x})$ | A smooth version of $\max(0,x)$. Implemented stably as $\max(x,0)+\operatorname{log1p}(e^{-\lvert x\rvert})$. |
-| $\operatorname{log1p}(x)$ | $\log(1+x)$ | Accurate when $x$ is tiny, because it never forms the sum $1+x$ explicitly. |
-| $\operatorname{expm1}(x)$ | $e^{x}-1$ | Accurate when $x$ is tiny, because it never forms the difference $e^x - 1$ explicitly. |
+| $\mathrm{softplus}(x)$ | $\log(1+e^{x})$ | A smooth version of $\max(0,x)$. Implemented stably as $\max(x,0)+\mathrm{log1p}(e^{-\lvert x\rvert})$. |
+| $\mathrm{log1p}(x)$ | $\log(1+x)$ | Accurate when $x$ is tiny, because it never forms the sum $1+x$ explicitly. |
+| $\mathrm{expm1}(x)$ | $e^{x}-1$ | Accurate when $x$ is tiny, because it never forms the difference $e^x - 1$ explicitly. |
 
 Why do these matter? Because computing `log(1 + 1e-20)` naively gives `0.0` (the `1e-20` is swallowed), while `log1p(1e-20)` correctly gives `1e-20`. Section 4 explains the swallowing.
 
@@ -194,7 +194,7 @@ $$m = z_t - \log\sum_{j\ne t} e^{z_j}$$
 
 Read it as "how far the correct logit sits above the combined weight of all the wrong logits". It has a clean consequence:
 
-$$q_t = \frac{e^{z_t}}{e^{z_t}+\sum_{j\ne t}e^{z_j}} = \frac{1}{1+e^{-m}}, \qquad \mathcal{L}(\mathbf{z},t)=\log(1+e^{-m})=\operatorname{softplus}(-m)$$
+$$q_t = \frac{e^{z_t}}{e^{z_t}+\sum_{j\ne t}e^{z_j}} = \frac{1}{1+e^{-m}}, \qquad \mathcal{L}(\mathbf{z},t)=\log(1+e^{-m})=\mathrm{softplus}(-m)$$
 
 and the exact gradient on the correct class is
 
@@ -282,7 +282,7 @@ The paper calls $c_d$ the **precision cliff** and reports $c_{16}\approx 5.5$ (b
 
 Computing $e^{z_k}$ directly overflows if some $z_k > 88$ in fp32. Standard libraries (the paper cites Higham, 2002) therefore subtract the largest logit $z_{\max}=\max_j z_j$ first. By the shift-invariance of Section 3.3 this changes nothing mathematically (this is the paper's Equation 1):
 
-$$\tilde z_k = z_k - z_{\max},\qquad \operatorname{logsoftmax}(\mathbf{z})_k=\tilde z_k-\log\sum_j e^{\tilde z_j},\qquad q_k=\frac{e^{\tilde z_k}}{\sum_j e^{\tilde z_j}}$$
+$$\tilde z_k = z_k - z_{\max},\qquad \mathrm{logsoftmax}(\mathbf{z})_k=\tilde z_k-\log\sum_j e^{\tilde z_j},\qquad q_k=\frac{e^{\tilde z_k}}{\sum_j e^{\tilde z_j}}$$
 
 After the shift every exponent is $\le 0$, so no overflow occurs, and the largest term is exactly $e^0=1$, so the denominator is at least 1 and never zero.
 
@@ -352,22 +352,22 @@ The demo in [Section 13](#13-runnable-demo-numpy-only) prints exactly these numb
 
 ## 7. The fix for Softmax Collapse
 
-**Idea:** never add 1 to $e^{-m}$ directly. Compute the margin $m$ separately from the log-sum-exp of the *non-largest* entries, and finish with the numerically stable $\operatorname{softplus}(-m)=\log(1+e^{-m})$.
+**Idea:** never add 1 to $e^{-m}$ directly. Compute the margin $m$ separately from the log-sum-exp of the *non-largest* entries, and finish with the numerically stable $\mathrm{softplus}(-m)=\log(1+e^{-m})$.
 
 Paper's Equation 5, for log-softmax (with $i_{\max}=\arg\max_i z_i$):
 
-$$\tilde z_k=\mathbf 1[k\ne i_{\max}]\,(z_k-z_{i_{\max}}),\qquad m=-\operatorname*{LSE}_{j\ne i_{\max}}\tilde z_j,\qquad \operatorname{logsoftmax}(\mathbf z)_k=\tilde z_k-\operatorname{softplus}(-m)$$
+$$\tilde z_k=\mathbf 1[k\ne i_{\max}]\,(z_k-z_{i_{\max}}),\qquad m=-\mathrm{LSE}_{j\ne i_{\max}}\tilde z_j,\qquad \mathrm{logsoftmax}(\mathbf z)_k=\tilde z_k-\mathrm{softplus}(-m)$$
 
-The arg-max slot is set to the constant $0$ (not $z_{i_{\max}}-z_{i_{\max}}$), and softmax is defined as $\exp(\operatorname{logsoftmax}(\mathbf z))$.
+The arg-max slot is set to the constant $0$ (not $z_{i_{\max}}-z_{i_{\max}}$), and softmax is defined as $\exp(\mathrm{logsoftmax}(\mathbf z))$.
 
 For hard-target cross-entropy the target $t$ replaces $i_{\max}$ and no arg-max is needed (Equation 6):
 
-$$m=-\operatorname*{LSE}_{j\ne t}(z_j-z_t),\qquad \mathcal L(\mathbf z,t)=\operatorname{softplus}(-m)$$
+$$m=-\mathrm{LSE}_{j\ne t}(z_j-z_t),\qquad \mathcal L(\mathbf z,t)=\mathrm{softplus}(-m)$$
 
 ### Why this repairs the gradient
 
 1. $z_t$ now enters the loss **only through the differences** $z_j - z_t$ for $j\neq t$. Anything that depends only on differences is unchanged by a uniform shift, so autodiff produces a gradient that sums to zero. Concretely, $g_t=-\sum_{j\ne t}g_j$.
-2. The derivative of $\operatorname{softplus}(-m)$ is $-\sigma(-m)=-\dfrac{e^{-m}}{1+e^{-m}}$, which keeps $e^{-m}$ **in the numerator**. Even when the denominator rounds to $1.0$, dividing $-e^{-m}$ by $1.0$ preserves the value, down to underflow (Equation 7):
+2. The derivative of $\mathrm{softplus}(-m)$ is $-\sigma(-m)=-\dfrac{e^{-m}}{1+e^{-m}}$, which keeps $e^{-m}$ **in the numerator**. Even when the denominator rounds to $1.0$, dividing $-e^{-m}$ by $1.0$ preserves the value, down to underflow (Equation 7):
 
 $$g_j=\frac{e^{z_j-z_t}}{1+e^{-m}}\ (j\ne t),\qquad g_t=-\sum_{j\ne t}g_j=-\frac{e^{-m}}{1+e^{-m}}$$
 
@@ -388,20 +388,20 @@ For the example $\mathbf z=[9,-9,-9]$ the fixed version returns loss $3.046\time
 
 ### 8.1 Background: knowledge distillation, temperature and KL divergence
 
-* **Knowledge distillation** (Hinton et al., 2015): a small **student** network is trained to imitate a large **teacher** network. The teacher's output distribution $\mathbf p=\operatorname{softmax}(\mathbf z_T)$ is used as a *soft target* for the student's logits $\mathbf z_S$.
-* **Temperature $T$**: logits are divided by $T$ before softmax, $\operatorname{softmax}(\mathbf z/T)$. A larger $T$ flattens the distribution so that $\mathbf p$ does not become one-hot. (The paper uses $T=4$ in its distillation experiment, which divides the margin by 4 and keeps it below $c_{16}$.)
+* **Knowledge distillation** (Hinton et al., 2015): a small **student** network is trained to imitate a large **teacher** network. The teacher's output distribution $\mathbf p=\mathrm{softmax}(\mathbf z_T)$ is used as a *soft target* for the student's logits $\mathbf z_S$.
+* **Temperature $T$**: logits are divided by $T$ before softmax, $\mathrm{softmax}(\mathbf z/T)$. A larger $T$ flattens the distribution so that $\mathbf p$ does not become one-hot. (The paper uses $T=4$ in its distillation experiment, which divides the margin by 4 and keeps it below $c_{16}$.)
 * **KL divergence** $\mathrm{KL}(\mathbf p\parallel\mathbf q)=\sum_k p_k\log(p_k/q_k)$ measures how different two distributions are. It is $0$ only when $\mathbf p=\mathbf q$. Since $\mathrm{KL}(\mathbf p\parallel\mathbf q)=\text{CE}(\mathbf p,\mathbf q)-H(\mathbf p)$ and $H(\mathbf p)$ does not depend on the student, the student's gradient from soft-target cross-entropy equals the gradient from KL.
 
 ### 8.2 What goes wrong
 
 The standard soft-target loss (paper's Equation 8) is
 
-$$\mathcal L(\mathbf z_S,\mathbf z_T)=-\sum_k p_k\operatorname{logsoftmax}(\mathbf z_S)_k,\qquad \tilde g_k = q_k-p_k$$
+$$\mathcal L(\mathbf z_S,\mathbf z_T)=-\sum_k p_k\mathrm{logsoftmax}(\mathbf z_S)_k,\qquad \tilde g_k = q_k-p_k$$
 
 and the code computes $\mathbf q$ and $\mathbf p$ **separately**, rounds each to a probability, and subtracts. Two defects follow:
 
 1. **Cancellation.** If $\mathbf z_S\approx\mathbf z_T$ then $q_k\approx p_k$. The small logit difference $\boldsymbol\delta=\mathbf z_S-\mathbf z_T$ is lost when $q_k$ and $p_k$ are rounded before subtracting (Section 4.3).
-2. **Forward/backward mismatch.** In the forward pass $\mathbf p$ comes from `softmax`; in the backward pass $\mathbf q$ is recovered as $\exp(\operatorname{logsoftmax}(\mathbf z_S))$. These are different sequences of operations, so even when $\mathbf z_S=\mathbf z_T$ exactly, $\mathbf q$ and $\mathbf p$ can differ in the last bits and the gradient is a small non-zero number instead of exactly $\mathbf 0$.
+2. **Forward/backward mismatch.** In the forward pass $\mathbf p$ comes from `softmax`; in the backward pass $\mathbf q$ is recovered as $\exp(\mathrm{logsoftmax}(\mathbf z_S))$. These are different sequences of operations, so even when $\mathbf z_S=\mathbf z_T$ exactly, $\mathbf q$ and $\mathbf p$ can differ in the last bits and the gradient is a small non-zero number instead of exactly $\mathbf 0$.
 
 Why a tiny non-zero gradient matters is explained by Adam (Section 9): Adam can turn tiny gradients into full-size steps.
 
@@ -420,15 +420,15 @@ Goal: compute $\mathbf q-\mathbf p$ directly from $\boldsymbol\delta=\mathbf z_S
 
 1. Since $q_k=\dfrac{e^{z_{T,k}+\delta_k}}{\sum_i e^{z_{T,i}+\delta_i}}=\dfrac{p_k e^{\delta_k}}{\sum_i p_i e^{\delta_i}}$, the ratio is $\dfrac{q_k}{p_k}=\dfrac{e^{\delta_k}}{\sum_i p_i e^{\delta_i}}$.
 2. Shifting $\boldsymbol\delta$ by a constant does not change this ratio, so **center** it under $\mathbf p$: $d_k=\delta_k-\sum_i p_i\delta_i$. Then $\sum_i p_i d_i=0$.
-3. Write $\sum_i p_i e^{d_i}=1+\sum_i p_i\operatorname{expm1}(d_i)$. Taking logs gives the log-ratio $s_k=\log(q_k/p_k)$:
-   $$s_k=d_k-\operatorname{log1p}\Big(\sum_i p_i\operatorname{expm1}(d_i)\Big)$$
-   The argument of `log1p` is always $\ge 0$ because $\operatorname{expm1}(x)\ge x$ and $\sum_i p_i d_i=0$.
+3. Write $\sum_i p_i e^{d_i}=1+\sum_i p_i\mathrm{expm1}(d_i)$. Taking logs gives the log-ratio $s_k=\log(q_k/p_k)$:
+   $$s_k=d_k-\mathrm{log1p}\Big(\sum_i p_i\mathrm{expm1}(d_i)\Big)$$
+   The argument of `log1p` is always $\ge 0$ because $\mathrm{expm1}(x)\ge x$ and $\sum_i p_i d_i=0$.
 4. Finally $q_k-p_k=p_k\,(q_k/p_k-1)$, so
-   $$u_k=p_k\operatorname{expm1}(s_k)$$
+   $$u_k=p_k\mathrm{expm1}(s_k)$$
 
 Together these are the paper's Equation 9:
 
-$$d_k=\delta_k-\sum_i p_i\delta_i,\qquad s_k=d_k-\operatorname{log1p}\Big(\sum_i p_i\operatorname{expm1}(d_i)\Big),\qquad u_k=p_k\operatorname{expm1}(s_k)$$
+$$d_k=\delta_k-\sum_i p_i\delta_i,\qquad s_k=d_k-\mathrm{log1p}\Big(\sum_i p_i\mathrm{expm1}(d_i)\Big),\qquad u_k=p_k\mathrm{expm1}(s_k)$$
 
 5. A last cleanup removes any residual floating-point drift so that the gradient is exactly zero-sum: $g_k=u_k-q_k\sum_i u_i$ (since $\sum_k q_k=1$, this gives $\sum_k g_k=0$).
 
@@ -783,7 +783,7 @@ What each demo shows, and what it does not:
 * **Demo 1** reproduces the cliff values from the formula in Section 4.4 (the fp16 row is an extra).
 * **Demo 2** reproduces Softmax Collapse: the standard loss and target gradient are exactly zero and the gradient sums to $3.05\times10^{-8}$, while the fixed version has the right loss and a zero-sum gradient.
 * **Demo 3** reproduces Softmax Cancellation: the standard fp32 gradient has wrong magnitudes and a missing third component; the fixed gradient matches the fp64 reference.
-* **Demo 4** shows that recovering $\mathbf q$ as $\exp(\operatorname{logsoftmax})$ and computing $\mathbf p$ as softmax gives different results at identical logits, which is the mismatch of Section 8.2. In this NumPy script the *gradient* function `std_soft_grad` uses the same routine for both, so Demo 3 at $\mathbf z_S=\mathbf z_T$ would print zeros; the paper's non-zero residual arises specifically in autodiff frameworks where forward and backward use different routines.
+* **Demo 4** shows that recovering $\mathbf q$ as $\exp(\mathrm{logsoftmax})$ and computing $\mathbf p$ as softmax gives different results at identical logits, which is the mismatch of Section 8.2. In this NumPy script the *gradient* function `std_soft_grad` uses the same routine for both, so Demo 3 at $\mathbf z_S=\mathbf z_T$ would print zeros; the paper's non-zero residual arises specifically in autodiff frameworks where forward and backward use different routines.
 * **Demo 5** shows Adam's normalized step staying near 1 until the gradient approaches $\epsilon$.
 
 ---
@@ -843,7 +843,7 @@ $m^\star\approx\log(10^{10})=23.0$, which exceeds $c_{32}=16.6$, so standard fp3
 <details>
 <summary><b>Q7.</b> In the Softmax Cancellation fix, why is the argument of <code>log1p</code> never negative?</summary>
 
-$\operatorname{expm1}(x)\ge x$ for all real $x$, so $\sum_ip_i\operatorname{expm1}(d_i)\ge\sum_ip_id_i=0$.
+$\mathrm{expm1}(x)\ge x$ for all real $x$, so $\sum_ip_i\mathrm{expm1}(d_i)\ge\sum_ip_id_i=0$.
 </details>
 
 ---
@@ -854,7 +854,7 @@ $\operatorname{expm1}(x)\ge x$ for all real $x$, so $\sum_ip_i\operatorname{expm
 |---|---|
 | Logit | Raw, unnormalized score output by a network for one class |
 | Softmax | Function turning logits into a probability distribution |
-| Log-softmax | $\log$ of softmax, computed as $z_k-\operatorname{LSE}(\mathbf z)$ |
+| Log-softmax | $\log$ of softmax, computed as $z_k-\mathrm{LSE}(\mathbf z)$ |
 | Cross-entropy (CE) | Loss $-\sum_kp_k\log q_k$ comparing target $\mathbf p$ with predicted $\mathbf q$ |
 | Hard / soft target | One-hot target / general probability vector target |
 | Gradient | Vector of partial derivatives of the loss; drives parameter updates |
